@@ -65,6 +65,7 @@ class Bridge(QObject):
     turn = Signal(int, str, list); token = Signal(int, str); drop = Signal(int)
 B = Bridge()
 cur_id = 0
+mic_muted = False
 
 def wav_bytes(pcm, sr):
     b = io.BytesIO()
@@ -136,7 +137,7 @@ def listener():
             if speech:
                 buf.append(f)
                 if now - last_voice > SILENCE or now - start > 10:
-                    if last_voice - start > 0.4: seg_q.put((np.concatenate(buf), sr))
+                    if last_voice - start > 0.4 and not mic_muted: seg_q.put((np.concatenate(buf), sr))
                     speech, buf = False, []
             else:
                 pre.append(f); pre = pre[-10:]
@@ -155,8 +156,9 @@ class Win(QWidget):
         lay = QVBoxLayout(self); lay.setContentsMargins(0, 0, 0, 0); lay.addWidget(box)
         v = QVBoxLayout(box); v.setContentsMargins(12, 8, 12, 10)
         top = QHBoxLayout(); self.st = QLabel("shuru ho raha hai..."); self.lv = QLabel("")
+        self.mute_btn = QPushButton("Mute"); self.mute_btn.clicked.connect(self.toggle_mute)
         x = QPushButton("x"); x.clicked.connect(QApplication.quit)
-        top.addWidget(self.st, 1); top.addWidget(self.lv); top.addWidget(x); v.addLayout(top)
+        top.addWidget(self.st, 1); top.addWidget(self.lv); top.addWidget(self.mute_btn); top.addWidget(x); v.addLayout(top)
         self.feed = QTextBrowser(); self.log = QTextBrowser(); self.log.setFixedHeight(170)
         self.log.setStyleSheet("font-size:12px;color:#8fa3bf")
         v.addWidget(self.feed, 1); v.addWidget(self.log)
@@ -164,6 +166,11 @@ class Win(QWidget):
         B.status.connect(self.st.setText)
         B.heard.connect(self.on_heard); B.turn.connect(self.on_turn)
         B.token.connect(self.on_token); B.drop.connect(self.on_drop)
+
+    def toggle_mute(self):
+        global mic_muted
+        mic_muted = not mic_muted
+        self.mute_btn.setText("Unmute" if mic_muted else "Mute")
 
     def on_heard(self, t, m):
         tag = f'<b style="color:#4ee0a1">pakda: {html.escape(", ".join(m))}</b>' if m else "ignore (keyword nahi)"
