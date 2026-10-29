@@ -3,3 +3,4 @@ sounddevice>=0.4.6
 numpy>=1.26
 groq>=0.11.0
 python-dotenv>=1.0.1
+gunicorn
